@@ -112,45 +112,6 @@ const DEPARTMENTS: Department[] = ["CAS", "CBAM", "CCSE", "CNAHS", "COA", "CTED"
 const YEARS: Year[] = ["1st", "2nd", "3rd", "4th"];
 const CATEGORIES: Category[] = ["Academic", "Music", "Sports", "Technology", "Language"];
 
-const INITIAL_POSTS: Post[] = [
-  {
-    id: "1", authorId: "demo1", authorName: "Carlos L.", authorDept: "CCSE", authorYear: "3rd",
-    type: "offer", category: "Academic",
-    description: "Offering comprehensive Calculus tutoring covering derivatives, integrals, and differential equations. Perfect for engineering and science students.",
-    price: 250,
-    comments: [], timestamp: new Date(Date.now() - 7200000)
-  },
-  {
-    id: "2", authorId: "demo2", authorName: "Wendy D.", authorDept: "CBAM", authorYear: "2nd",
-    type: "request", category: "Technology",
-    description: "Need help with responsive web design, UI/UX improvements, and frontend development using React and modern CSS frameworks.",
-    price: 50,
-    comments: [], timestamp: new Date(Date.now() - 18000000)
-  },
-  {
-    id: "3", authorId: "demo3", authorName: "Yuki C.", authorDept: "CTHM", authorYear: "1st",
-    type: "offer", category: "Sports",
-    description: "Offering free yoga sessions in exchange for photography or video editing skills. Beginner-friendly classes focusing on flexibility and mindfulness.",
-    price: 0,
-    comments: [], timestamp: new Date(Date.now() - 86400000)
-  },
-  {
-    id: "4", authorId: "demo4", authorName: "Paul Y.", authorDept: "CCSE", authorYear: "4th",
-    type: "offer", category: "Technology",
-    description: "Advanced Python tutoring including data structures, algorithms, machine learning basics, and data visualization with pandas and matplotlib.",
-    price: 200,
-    comments: [], timestamp: new Date(Date.now() - 172800000)
-  }
-];
-
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  { id: "n1", type: "message", fromUser: "Maria Santos", content: "sent you a message about your Calculus tutoring post", timestamp: new Date(Date.now() - 300000), read: false },
-];
-
-const INITIAL_MESSAGES: Message[] = [
-  { id: "m1", senderId: "example_user", senderName: "Maria Santos", recipientId: "", content: "Hi! I saw your post about Calculus tutoring. Are you available this Friday?", timestamp: new Date(Date.now() - 600000) },
-];
-
 // ==================== COMPONENTS ====================
 function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
@@ -233,9 +194,9 @@ function LoginScreen({ onSwitch }: { onSwitch: () => void }) {
     });
     if (!user) { setError("No account found. Please sign up first."); return; }
     setCurrentUser(user);
-    setPosts(INITIAL_POSTS);
-    setMessages(INITIAL_MESSAGES);
-    setNotifications(INITIAL_NOTIFICATIONS);
+    setPosts([]);
+    setMessages([]);
+    setNotifications([]);
     setError("");
   };
 
@@ -501,21 +462,7 @@ function HomeFeed({ onCreatePost }: { onCreatePost: () => void }) {
   const [sharePost, setSharePost] = useState<Post | null>(null);
 
   // Example post for demo
-  const examplePost: Post = {
-    id: "example",
-    authorId: "example_user",
-    authorName: "Maria Santos",
-    authorDept: "CCSE",
-    authorYear: "3rd",
-    type: "offer",
-    category: "Academic",
-    description: "Offering Calculus tutoring for beginners. I can help with derivatives, integrals, and differential equations. Available Mon-Fri 2-6pm at Main Campus Library.",
-    price: 150,
-    comments: [],
-    timestamp: new Date(Date.now() - 3600000)
-  };
-
-  const allPosts = [examplePost, ...posts];
+  const allPosts = posts;
   const filteredPosts = allPosts.filter(post => {
     const matchesSearch = post.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || post.category === selectedCategory;
@@ -1339,12 +1286,12 @@ function ProfileScreen() {
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>My Postings Dashboard</h3>
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
           <div className="stat-box"><div className="stat-number">{userPosts.length}</div><div className="stat-label">Active</div></div>
-          <div className="stat-box"><div className="stat-number">3</div><div className="stat-label">Completed</div></div>
+          <div className="stat-box"><div className="stat-number">0</div><div className="stat-label">Completed</div></div>
           <div className="stat-box"><div className="stat-number">0</div><div className="stat-label">Pending</div></div>
         </div>
         <div style={{ borderTop: "1px solid #2a2d35", paddingTop: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 14, color: "#9ca3af" }}>Requests</span><span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>3</span></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 14, color: "#9ca3af" }}>Completed</span><span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>2</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 14, color: "#9ca3af" }}>Requests</span><span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>0</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 14, color: "#9ca3af" }}>Completed</span><span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>0</span></div>
           <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 14, color: "#9ca3af" }}>Pending offers</span><span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>0</span></div>
         </div>
       </div>
@@ -1489,9 +1436,9 @@ export default function CampusApp() {
       try {
         const user = JSON.parse(saved);
         setCurrentUser(user);
-        setPosts(INITIAL_POSTS);
-        setMessages(INITIAL_MESSAGES);
-        setNotifications(INITIAL_NOTIFICATIONS);
+        setPosts([]);
+        setMessages([]);
+        setNotifications([]);
         setShowLanding(false);
       } catch (e) {
         console.error("Failed to load saved user:", e);
