@@ -144,20 +144,6 @@ body {
   border-color: #3a3d45;
 }
 
-.like-btn {
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.like-btn:hover {
-  color: #ef4444;
-}
-
-.like-btn.liked {
-  color: #ef4444;
-}
-
 .comment-input {
   flex: 1;
   padding: 10px 16px;

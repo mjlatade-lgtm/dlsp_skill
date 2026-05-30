@@ -8,7 +8,8 @@ import {
   School, GraduationCap, Plus, Search,
   Monitor, Lightbulb, Music, Code, Settings,
   DollarSign, ChevronDown, X, Eye, Lock,
-  Mail, MapPin
+  Mail, MapPin,
+  Star
 } from "lucide-react";
 import "./globals.css";
 
@@ -57,9 +58,22 @@ interface Message {
   senderId: string;
   senderName: string;
   recipientId: string;
+  recipientName?: string;
   content: string;
   timestamp: Date;
 }
+
+interface Feedback {
+  id: string;
+  fromUserId: string;
+  fromUserName: string;
+  toUserId: string;
+  toUserName: string;
+  rating: number;
+  comment: string;
+  timestamp: Date;
+}
+
 
 interface Notification {
   id: string;
@@ -80,6 +94,8 @@ interface AppContextType {
   setMessages: (msgs: Message[]) => void;
   notifications: Notification[];
   setNotifications: (notifs: Notification[]) => void;
+  feedbacks: Feedback[];
+  setFeedbacks: (feedbacks: Feedback[]) => void;
   logout: () => void;
 }
 
@@ -132,7 +148,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
 ];
 
 const INITIAL_MESSAGES: Message[] = [
-  { id: "m1", senderId: "example_user", senderName: "Maria Santos", recipientId: "user_current", content: "Hi! I saw your post about Calculus tutoring. Are you available this Friday?", timestamp: new Date(Date.now() - 600000) },
+  { id: "m1", senderId: "example_user", senderName: "Maria Santos", recipientId: "", content: "Hi! I saw your post about Calculus tutoring. Are you available this Friday?", timestamp: new Date(Date.now() - 600000) },
 ];
 
 // ==================== COMPONENTS ====================
@@ -358,6 +374,7 @@ function ConnectModal({ post, onClose }: { post: Post; onClose: () => void }) {
       senderId: currentUser?.id || "",
       senderName: currentUser?.name || "You",
       recipientId: post.authorId,
+      recipientName: post.authorName,
       content: message,
       timestamp: new Date()
     };
@@ -720,11 +737,13 @@ function NewMessageModal({ onClose }: { onClose: () => void }) {
 
   const handleSend = () => {
     if (!message.trim() || !selectedUser) return;
+    const recipientName = allUsers.find(u => u.id === selectedUser)?.name || "User";
     const newMsg: Message = {
       id: "msg_" + Date.now(),
       senderId: currentUser?.id || "",
       senderName: currentUser?.name || "You",
       recipientId: selectedUser,
+      recipientName: recipientName,
       content: message,
       timestamp: new Date()
     };
@@ -796,12 +815,207 @@ function NewMessageModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ==================== FEEDBACK MODAL ====================
+function FeedbackModal({ toUserId, toUserName, onClose }: { toUserId: string; toUserName: string; onClose: () => void }) {
+  const { currentUser, feedbacks, setFeedbacks } = useApp();
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = () => {
+    if (rating === 0) return;
+    const newFeedback: Feedback = {
+      id: "fb_" + Date.now(),
+      fromUserId: currentUser?.id || "",
+      fromUserName: currentUser?.name || "Anonymous",
+      toUserId,
+      toUserName,
+      rating,
+      comment: comment.trim(),
+      timestamp: new Date()
+    };
+    setFeedbacks([...feedbacks, newFeedback]);
+    setSubmitted(true);
+    setTimeout(() => { onClose(); }, 2000);
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)"
+    }} onClick={onClose}>
+      <div style={{
+        background: "#1a1d23", borderRadius: 20, padding: 32,
+        width: "100%", maxWidth: 480, margin: "20px",
+        border: "1px solid #2a2d35",
+        boxShadow: "0 25px 50px rgba(0,0,0,0.5)"
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <h3 style={{ fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>Leave Feedback</h3>
+            <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>For: {toUserName}</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, borderRadius: 10, color: "#6b7280" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {submitted ? (
+          <div style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(42,157,143,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <Check size={28} color="#2a9d8f" />
+            </div>
+            <h4 style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0", marginBottom: 8 }}>Thank You!</h4>
+            <p style={{ fontSize: 14, color: "#6b7280" }}>Your feedback has been submitted.</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 24, textAlign: "center" }}>
+              <p style={{ fontSize: 14, color: "#9ca3af", marginBottom: 12 }}>How was your experience?</p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 4,
+                      fontSize: 32,
+                      transition: "transform 0.15s ease",
+                      transform: hoverRating >= star || rating >= star ? "scale(1.1)" : "scale(1)"
+                    }}
+                  >
+                    <span style={{
+                      color: (hoverRating || rating) >= star ? "#d4a843" : "#374151",
+                      transition: "color 0.15s ease"
+                    }}>★</span>
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
+                {rating === 0 ? "Tap a star to rate" : rating === 1 ? "Poor" : rating === 2 ? "Fair" : rating === 3 ? "Good" : rating === 4 ? "Very Good" : "Excellent"}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#e2e8f0" }}>Comments (optional)</label>
+              <textarea
+                className="campus-input"
+                style={{ minHeight: 100, resize: "none" }}
+                placeholder="Share your experience..."
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+              />
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              className="campus-btn campus-btn-primary"
+              style={{ width: "100%", padding: "16px", opacity: rating === 0 ? 0.5 : 1 }}
+              disabled={rating === 0}
+            >
+              <Send size={18} /> Submit Feedback
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== USER PROFILE MODAL ====================
+function UserProfileModal({ userId, userName, onClose }: { userId: string; userName: string; onClose: () => void }) {
+  const { posts, feedbacks } = useApp();
+
+  // Find user's posts to get dept/year info
+  const userPosts = posts.filter(p => p.authorId === userId);
+  const userPost = userPosts[0];
+
+  // Find feedback for this user
+  const userFeedbacks = feedbacks.filter(f => f.toUserId === userId);
+  const avgRating = userFeedbacks.length > 0 
+    ? userFeedbacks.reduce((sum, f) => sum + f.rating, 0) / userFeedbacks.length 
+    : 0;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)"
+    }} onClick={onClose}>
+      <div style={{
+        background: "#1a1d23", borderRadius: 20, padding: 32,
+        width: "100%", maxWidth: 420, margin: "20px",
+        border: "1px solid #2a2d35",
+        boxShadow: "0 25px 50px rgba(0,0,0,0.5)"
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>User Profile</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, borderRadius: 10, color: "#6b7280" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <Avatar name={userName} size={80} />
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#e2e8f0", marginTop: 12, marginBottom: 4 }}>{userName}</h2>
+          {userPost && (
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
+              <span className="badge badge-dept"><School size={12} style={{ marginRight: 4 }} />{userPost.authorDept}</span>
+              <span className="badge badge-year"><GraduationCap size={12} style={{ marginRight: 4 }} />{userPost.authorYear} Year</span>
+            </div>
+          )}
+        </div>
+
+        {userFeedbacks.length > 0 && (
+          <div style={{ background: "#252830", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#d4a843" }}>{avgRating.toFixed(1)}</div>
+              <div>
+                <div style={{ color: "#d4a843", fontSize: 16 }}>{"★".repeat(Math.round(avgRating))}{"☆".repeat(5 - Math.round(avgRating))}</div>
+                <div style={{ fontSize: 13, color: "#6b7280" }}>{userFeedbacks.length} rating{userFeedbacks.length !== 1 ? "s" : ""}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {userPosts.length > 0 && (
+          <div>
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: "#9ca3af", marginBottom: 12, textTransform: "uppercase", letterSpacing: "1px" }}>Active Posts</h4>
+            {userPosts.slice(0, 3).map(post => (
+              <div key={post.id} style={{ background: "#252830", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, color: "#2a9d8f", fontWeight: 600 }}>{post.type === "offer" ? "Offering" : "Requesting"} {post.category}</span>
+                  <span className="price-tag" style={{ fontSize: 12 }}>{post.price === 0 ? "Free" : `₱${post.price}`}</span>
+                </div>
+                <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.4, margin: 0 }}>{post.description.slice(0, 80)}...</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {userPosts.length === 0 && (
+          <p style={{ textAlign: "center", color: "#6b7280", fontSize: 14, padding: "20px 0" }}>No active posts from this user.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ==================== MESSAGES ====================
 function MessagesScreen() {
-  const { messages, setMessages, currentUser } = useApp();
+  const { messages, setMessages, currentUser, posts } = useApp();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [showNewMessage, setShowNewMessage] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Get all unique conversation partners (both sent and received)
   const allUserIds = new Set<string>();
@@ -809,25 +1023,39 @@ function MessagesScreen() {
     if (m.senderId !== currentUser?.id) {
       allUserIds.add(m.senderId);  // People who sent us messages
     }
+    if (m.recipientId && m.recipientId !== currentUser?.id) {
+      allUserIds.add(m.recipientId); // People we sent messages to
+    }
   });
 
   const chatUsers = Array.from(allUserIds).map(id => {
-    const msg = messages.find(m => m.senderId === id);
-    return { id, name: msg?.senderName || "Unknown" };
+    // Find name: if they sent us a message, use senderName
+    const incomingMsg = messages.find(m => m.senderId === id);
+    // Or if we sent them a message, use recipientName
+    const outgoingMsg = messages.find(m => m.recipientId === id && m.recipientName);
+    // Or find from posts if we sent them a message
+    const postAuthor = posts.find(p => p.authorId === id);
+    const name = incomingMsg?.senderName || outgoingMsg?.recipientName || postAuthor?.authorName || "User";
+    return { id, name };
   });
 
-  const currentMessages = messages.filter(m =>
-    (m.senderId === selectedChat && m.senderId !== currentUser?.id) ||
-    (m.senderId === currentUser?.id && selectedChat)
-  );
+  // Show all messages between currentUser and selectedChat (both directions)
+  // Also show messages with empty recipientId (initial demo messages sent to "everyone")
+  const currentMessages = messages.filter(m => {
+    const isFromMeToThem = m.senderId === currentUser?.id && m.recipientId === selectedChat;
+    const isFromThemToMe = m.senderId === selectedChat && (m.recipientId === currentUser?.id || m.recipientId === "");
+    return isFromMeToThem || isFromThemToMe;
+  });
 
   const handleSend = () => {
     if (!newMessage.trim() || !selectedChat) return;
+    const recipientName = chatUsers.find(u => u.id === selectedChat)?.name || "User";
     const msg: Message = {
       id: "msg_" + Date.now(),
       senderId: currentUser?.id || "",
       senderName: currentUser?.name || "You",
       recipientId: selectedChat,
+      recipientName: recipientName,
       content: newMessage,
       timestamp: new Date()
     };
@@ -856,7 +1084,7 @@ function MessagesScreen() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: "#e2e8f0" }}>{user.name}</div>
                 <div style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {messages.filter(m => m.senderId === user.id).slice(-1)[0]?.content || "Start chatting"}
+                  {messages.filter(m => (m.senderId === user.id && m.recipientId === currentUser?.id) || (m.senderId === currentUser?.id && m.recipientId === user.id)).slice(-1)[0]?.content || "Start chatting"}
                 </div>
               </div>
             </div>
@@ -867,9 +1095,34 @@ function MessagesScreen() {
       <div style={{ flex: 1, background: "#0f1115", borderRadius: "0 16px 16px 0", display: "flex", flexDirection: "column" }}>
         {selectedChat ? (
           <>
-            <div style={{ padding: "16px 20px", background: "#1a1d23", borderBottom: "1px solid #2a2d35", display: "flex", alignItems: "center", gap: 12 }}>
-              <Avatar name={chatUsers.find(u => u.id === selectedChat)?.name || ""} size={40} />
-              <span style={{ fontWeight: 700, color: "#e2e8f0" }}>{chatUsers.find(u => u.id === selectedChat)?.name}</span>
+            <div style={{ padding: "16px 20px", background: "#1a1d23", borderBottom: "1px solid #2a2d35", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div 
+                style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
+                onClick={() => setShowProfile(true)}
+                title="Click to view profile"
+              >
+                <Avatar name={chatUsers.find(u => u.id === selectedChat)?.name || ""} size={40} />
+                <div>
+                  <span style={{ fontWeight: 700, color: "#e2e8f0", display: "block" }}>{chatUsers.find(u => u.id === selectedChat)?.name}</span>
+                  <span style={{ fontSize: 12, color: "#2a9d8f" }}>Tap to view profile</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => setShowProfile(true)}
+                  className="campus-btn campus-btn-secondary"
+                  style={{ padding: "8px 16px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <User size={14} /> View Profile
+                </button>
+                <button
+                  onClick={() => setShowFeedback(true)}
+                  className="campus-btn campus-btn-secondary"
+                  style={{ padding: "8px 16px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <Star size={14} /> Leave Feedback
+                </button>
+              </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
               {currentMessages.map(msg => (
@@ -900,6 +1153,20 @@ function MessagesScreen() {
         )}
       </div>
       {showNewMessage && <NewMessageModal onClose={() => setShowNewMessage(false)} />}
+      {showFeedback && selectedChat && (
+        <FeedbackModal
+          toUserId={selectedChat}
+          toUserName={chatUsers.find(u => u.id === selectedChat)?.name || "User"}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
+      {showProfile && selectedChat && (
+        <UserProfileModal
+          userId={selectedChat}
+          userName={chatUsers.find(u => u.id === selectedChat)?.name || "User"}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 }
@@ -959,7 +1226,7 @@ function NotificationsScreen() {
 
 // ==================== PROFILE ====================
 function ProfileScreen() {
-  const { currentUser, setCurrentUser, posts, logout } = useApp();
+  const { currentUser, setCurrentUser, posts, logout, feedbacks } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [sharePost, setSharePost] = useState<Post | null>(null);
   const [editForm, setEditForm] = useState({
@@ -1082,6 +1349,41 @@ function ProfileScreen() {
         </div>
       </div>
 
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: "#e2e8f0" }}>Your Feedback</h3>
+        {(() => {
+          const userFeedbacks = feedbacks.filter(f => f.toUserId === currentUser?.id);
+          if (userFeedbacks.length === 0) {
+            return <div className="post-card" style={{ textAlign: "center", padding: 24, color: "#6b7280" }}><p>No feedback yet. Complete a skill exchange to get rated!</p></div>;
+          }
+          const avgRating = userFeedbacks.reduce((sum, f) => sum + f.rating, 0) / userFeedbacks.length;
+          return (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <div style={{ fontSize: 32, fontWeight: 800, color: "#d4a843" }}>{avgRating.toFixed(1)}</div>
+                <div>
+                  <div style={{ color: "#d4a843", fontSize: 18 }}>{"★".repeat(Math.round(avgRating))}{"☆".repeat(5 - Math.round(avgRating))}</div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>{userFeedbacks.length} rating{userFeedbacks.length !== 1 ? "s" : ""}</div>
+                </div>
+              </div>
+              {userFeedbacks.map(fb => (
+                <div key={fb.id} className="post-card" style={{ marginBottom: 10, padding: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Avatar name={fb.fromUserName} size={32} />
+                      <span style={{ fontWeight: 600, fontSize: 14, color: "#e2e8f0" }}>{fb.fromUserName}</span>
+                    </div>
+                    <span style={{ color: "#d4a843", fontSize: 14 }}>{"★".repeat(fb.rating)}{"☆".repeat(5 - fb.rating)}</span>
+                  </div>
+                  {fb.comment && <p style={{ fontSize: 14, color: "#9ca3af", lineHeight: 1.5, marginLeft: 42 }}>{fb.comment}</p>}
+                  <p style={{ fontSize: 12, color: "#6b7280", marginTop: 8, marginLeft: 42 }}>{new Date(fb.timestamp).toLocaleDateString()}</p>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
       <div>
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: "#e2e8f0" }}>Your Postings</h3>
         {userPosts.length === 0 ? (
@@ -1171,13 +1473,14 @@ export default function CampusApp() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [activeTab, setActiveTab] = useState("home");
   const [authScreen, setAuthScreen] = useState<"login" | "signup">("login");
   const [showLanding, setShowLanding] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
 
   useEffect(() => {
-    localStorage.removeItem("campus_users");
+    // Don't clear campus_users - we want to persist registered users!
     localStorage.removeItem("campus_current_user");
     localStorage.setItem("campus_app_version", "v2");
 
@@ -1205,11 +1508,31 @@ export default function CampusApp() {
     }
   }, [currentUser]);
 
+  // Persist feedbacks to localStorage
+  useEffect(() => {
+    if (feedbacks.length > 0) {
+      localStorage.setItem("campus_feedbacks", JSON.stringify(feedbacks));
+    }
+  }, [feedbacks]);
+
+  // Load feedbacks from localStorage on mount
+  useEffect(() => {
+    const savedFeedbacks = localStorage.getItem("campus_feedbacks");
+    if (savedFeedbacks) {
+      try {
+        setFeedbacks(JSON.parse(savedFeedbacks));
+      } catch (e) {
+        console.error("Failed to load feedbacks:", e);
+      }
+    }
+  }, []);
+
   const logout = () => {
     setCurrentUser(null);
     setPosts([]);
     setMessages([]);
     setNotifications([]);
+    setFeedbacks([]);
     setActiveTab("home");
     setAuthScreen("login");
     setShowLanding(true);
@@ -1220,6 +1543,7 @@ export default function CampusApp() {
     posts, setPosts,
     messages, setMessages,
     notifications, setNotifications,
+    feedbacks, setFeedbacks,
     logout
   };
 
